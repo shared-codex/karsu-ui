@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DEFAULT_SENSOR_POLL_INTERVAL_MS,
   useSensorReadings,
@@ -178,6 +179,22 @@ export function SensorReadingsDashboard() {
   } = sensorState;
 
   const statistics = useMemo(() => computeStatistics(data), [data]);
+  const isInitialLoading = isLoading && data.length === 0;
+  const latestMoistureValue =
+    statistics.latest && Number.isFinite(statistics.latest.moisture)
+      ? statistics.latest.moisture
+      : null;
+  const earliestMoistureValue =
+    statistics.earliest && Number.isFinite(statistics.earliest.moisture)
+      ? statistics.earliest.moisture
+      : null;
+  const latestMoistureDisplay = formatMoisture(latestMoistureValue);
+  const earliestMoistureDisplay = formatMoisture(earliestMoistureValue);
+  const averageMoistureDisplay = formatMoisture(statistics.average);
+  const minMoistureDisplay = formatMoisture(statistics.min);
+  const maxMoistureDisplay = formatMoisture(statistics.max);
+  const rangeDisplay = formatMoisture(statistics.range);
+  const trendDisplay = formatSignedMoisture(statistics.trend);
 
   const totalItemsFromMeta = meta?.totalItems ?? 0;
   const normalizedTotalItems =
@@ -199,6 +216,12 @@ export function SensorReadingsDashboard() {
   const formattedDisplayPage = integerFormatter.format(displayPage);
   const formattedTotalPages = integerFormatter.format(totalPages);
 
+  const earliestDate =
+    statistics.earliest !== null ? new Date(statistics.earliest.timestamp) : null;
+  const earliestAbsolute = statistics.earliest
+    ? formatTimestamp(statistics.earliest.timestamp)
+    : "—";
+  const earliestRelative = formatRelativeTime(earliestDate);
   const lastUpdatedDate =
     statistics.lastUpdated !== null ? new Date(statistics.lastUpdated) : null;
   const lastUpdatedAbsolute = statistics.latest
@@ -254,19 +277,24 @@ export function SensorReadingsDashboard() {
             <CardTitle className="text-sm font-medium">Latest moisture</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            <div className="text-2xl font-semibold tracking-tight text-foreground">
-              {formatMoisture(
-                statistics.latest && Number.isFinite(statistics.latest.moisture)
-                  ? statistics.latest.moisture
-                  : null,
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {lastUpdatedRelative !== "—"
-                ? `Updated ${lastUpdatedRelative}`
-                : "Awaiting first update"}
-              {lastUpdatedAbsolute !== "—" ? ` • ${lastUpdatedAbsolute}` : null}
-            </p>
+            {isInitialLoading ? (
+              <>
+                <Skeleton className="h-7 w-24" />
+                <Skeleton className="h-4 w-40" />
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-semibold tracking-tight text-foreground">
+                  {latestMoistureDisplay}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {lastUpdatedRelative !== "—"
+                    ? `Updated ${lastUpdatedRelative}`
+                    : "Awaiting first update"}
+                  {lastUpdatedAbsolute !== "—" ? ` • ${lastUpdatedAbsolute}` : null}
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -274,13 +302,29 @@ export function SensorReadingsDashboard() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Average moisture</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-1">
-            <div className="text-2xl font-semibold tracking-tight text-foreground">
-              {formatMoisture(statistics.average)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Min {formatMoisture(statistics.min)} • Max {formatMoisture(statistics.max)}
-            </p>
+          <CardContent className="space-y-3">
+            {isInitialLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-7 w-20" />
+                <Skeleton className="h-4 w-36" />
+              </div>
+            ) : (
+              <>
+                <div className="text-2xl font-semibold tracking-tight text-foreground">
+                  {averageMoistureDisplay}
+                </div>
+                <dl className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="space-y-1">
+                    <dt className="text-muted-foreground">Min</dt>
+                    <dd className="font-medium text-foreground">{minMoistureDisplay}</dd>
+                  </div>
+                  <div className="space-y-1">
+                    <dt className="text-muted-foreground">Max</dt>
+                    <dd className="font-medium text-foreground">{maxMoistureDisplay}</dd>
+                  </div>
+                </dl>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -289,12 +333,21 @@ export function SensorReadingsDashboard() {
             <CardTitle className="text-sm font-medium">Variation</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            <div className="text-2xl font-semibold tracking-tight text-foreground">
-              {formatMoisture(statistics.range)}
-            </div>
-            <p className={trendClassName}>
-              Change since first reading {formatSignedMoisture(statistics.trend)}
-            </p>
+            {isInitialLoading ? (
+              <>
+                <Skeleton className="h-7 w-20" />
+                <Skeleton className="h-4 w-32" />
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-semibold tracking-tight text-foreground">
+                  {rangeDisplay}
+                </div>
+                <p className={trendClassName}>
+                  Change since first reading {trendDisplay}
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -303,28 +356,45 @@ export function SensorReadingsDashboard() {
             <CardTitle className="text-sm font-medium">Records</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div>
-              <p className="text-xs text-muted-foreground">Rows on this page</p>
-              <p className="text-2xl font-semibold tracking-tight text-foreground">
-                {formattedRecordsOnPage}
-              </p>
-            </div>
-            <dl className="grid grid-cols-2 gap-3 text-xs">
-              <div className="space-y-1">
-                <dt className="text-muted-foreground">Total records</dt>
-                <dd className="font-medium text-foreground">{formattedTotalRecords}</dd>
+            {isInitialLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-7 w-16" />
+                <div className="grid grid-cols-2 gap-3">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <Skeleton
+                      key={index}
+                      className={cn("h-10 w-full", index === 2 ? "col-span-2" : undefined)}
+                    />
+                  ))}
+                </div>
               </div>
-              <div className="space-y-1">
-                <dt className="text-muted-foreground">Rows per page</dt>
-                <dd className="font-medium text-foreground">{formattedLimit}</dd>
-              </div>
-              <div className="col-span-2 space-y-1">
-                <dt className="text-muted-foreground">Page</dt>
-                <dd className="font-medium text-foreground">
-                  {formattedDisplayPage} of {formattedTotalPages}
-                </dd>
-              </div>
-            </dl>
+            ) : (
+              <>
+                <div>
+                  <p className="text-xs text-muted-foreground">Rows on this page</p>
+                  <p className="text-2xl font-semibold tracking-tight text-foreground">
+                    {formattedRecordsOnPage}
+                  </p>
+                </div>
+                <dl className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="space-y-1">
+                    <dt className="text-muted-foreground">Total records</dt>
+                    <dd className="font-medium text-foreground">{formattedTotalRecords}</dd>
+                  </div>
+                  <div className="space-y-1">
+                    <dt className="text-muted-foreground">Rows per page</dt>
+                    <dd className="font-medium text-foreground">{formattedLimit}</dd>
+                  </div>
+                  <div className="col-span-2 space-y-1">
+                    <dt className="text-muted-foreground">Page</dt>
+                    <dd className="font-medium text-foreground">
+                      {formattedDisplayPage} of {formattedTotalPages}
+                    </dd>
+                  </div>
+                </dl>
+              </>
+            )}
           </CardContent>
         </Card>
       </section>
@@ -367,11 +437,15 @@ export function SensorReadingsDashboard() {
               </div>
               <div className="flex flex-col gap-1">
                 <span className="text-muted-foreground">Last updated</span>
-                <span className="text-sm font-medium text-foreground">
-                  {lastUpdatedRelative !== "—"
-                    ? `${lastUpdatedRelative} (${lastUpdatedAbsolute})`
-                    : "—"}
-                </span>
+                {isInitialLoading ? (
+                  <Skeleton className="h-4 w-32" />
+                ) : (
+                  <span className="text-sm font-medium text-foreground">
+                    {lastUpdatedRelative !== "—"
+                      ? `${lastUpdatedRelative} (${lastUpdatedAbsolute})`
+                      : "—"}
+                  </span>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -381,25 +455,48 @@ export function SensorReadingsDashboard() {
               <CardTitle className="text-base font-semibold">Dataset summary</CardTitle>
               <CardDescription>Snapshot of the current query window.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Records on page</span>
-                <span className="font-medium text-foreground">{formattedRecordsOnPage}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Total records</span>
-                <span className="font-medium text-foreground">{formattedTotalRecords}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Rows per page</span>
-                <span className="font-medium text-foreground">{formattedLimit}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Page</span>
-                <span className="font-medium text-foreground">
-                  {formattedDisplayPage} / {formattedTotalPages}
-                </span>
-              </div>
+            <CardContent className="space-y-4 text-sm">
+              {isInitialLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Time window
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1 rounded-md border border-dashed border-border/60 p-3">
+                        <p className="text-xs text-muted-foreground">Earliest reading</p>
+                        <p className="text-sm font-medium text-foreground">{earliestAbsolute}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {earliestRelative !== "—" ? earliestRelative : "Awaiting data"}
+                        </p>
+                      </div>
+                      <div className="space-y-1 rounded-md border border-dashed border-border/60 p-3">
+                        <p className="text-xs text-muted-foreground">Latest reading</p>
+                        <p className="text-sm font-medium text-foreground">{lastUpdatedAbsolute}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {lastUpdatedRelative !== "—" ? lastUpdatedRelative : "Awaiting data"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <span className="text-xs text-muted-foreground">Earliest moisture</span>
+                      <p className="font-medium text-foreground">{earliestMoistureDisplay}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-muted-foreground">Latest moisture</span>
+                      <p className="font-medium text-foreground">{latestMoistureDisplay}</p>
+                    </div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

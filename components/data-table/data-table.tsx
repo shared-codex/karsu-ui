@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export interface DataTableState {
   sorting?: SortingState;
@@ -84,7 +85,11 @@ export function DataTable<TData, TValue>({
     onColumnVisibilityChange,
   });
 
-  const isEmpty = !isLoading && table.getRowModel().rows.length === 0;
+  const rowModel = table.getRowModel();
+  const visibleColumns = table.getVisibleLeafColumns();
+  const shouldShowSkeleton = isLoading && rowModel.rows.length === 0;
+  const isEmpty = !isLoading && rowModel.rows.length === 0;
+  const skeletonRows = React.useMemo(() => Array.from({ length: 5 }), []);
 
   return (
     <div className="space-y-2">
@@ -104,12 +109,22 @@ export function DataTable<TData, TValue>({
             ))}
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  Loading sensor readings...
-                </TableCell>
-              </TableRow>
+            {shouldShowSkeleton ? (
+              skeletonRows.map((_, rowIndex) => (
+                <TableRow key={`loading-${rowIndex}`}>
+                  {visibleColumns.length > 0 ? (
+                    visibleColumns.map((column) => (
+                      <TableCell key={`${column.id}-skeleton-${rowIndex}`}>
+                        <Skeleton className="h-4 w-full" />
+                      </TableCell>
+                    ))
+                  ) : (
+                    <TableCell>
+                      <Skeleton className="h-4 w-full" />
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))
             ) : isEmpty ? (
               <TableRow>
                 <TableCell colSpan={columns.length} className="p-0">

@@ -132,6 +132,31 @@ export function SensorReadingsTable({
     }
   };
 
+  const emptyState = (
+    <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-lg">
+        <span role="img" aria-label="sprout" className="leading-none">
+          🌱
+        </span>
+      </div>
+      <div className="space-y-1">
+        <p className="text-sm font-medium text-foreground">No sensor readings yet</p>
+        <p className="text-xs text-muted-foreground">
+          Connect a device or refresh to check again.
+        </p>
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={handleManualRefresh}
+        disabled={isLoading || isRefreshing || isManualRefresh}
+      >
+        Refresh
+      </Button>
+    </div>
+  );
+
   let statusMessage = "Sensor readings are up to date.";
   let statusIndicatorClass = "bg-emerald-500/70";
 
@@ -163,9 +188,13 @@ export function SensorReadingsTable({
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
             Rows per page
             <select
-              className="rounded-md border border-input bg-background px-2 py-1 text-sm font-medium text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-200"
+              className={cn(
+                "h-9 rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground shadow-sm",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-200",
+              )}
               value={limit}
               onChange={handleLimitChange}
+              aria-label="Rows per page"
             >
               {PAGE_SIZE_OPTIONS.map((option) => (
                 <option key={option} value={option}>
@@ -177,10 +206,11 @@ export function SensorReadingsTable({
           <Button
             type="button"
             variant="outline"
+            size="sm"
             onClick={handleManualRefresh}
             disabled={isLoading || isRefreshing || isManualRefresh}
           >
-            Refresh
+            {isManualRefresh ? "Refreshing" : "Refresh"}
           </Button>
         </div>
       </CardHeader>
@@ -198,6 +228,7 @@ export function SensorReadingsTable({
           columns={sensorReadingColumns}
           data={data}
           isLoading={isLoading}
+          emptyState={emptyState}
           manualPagination
           pageCount={
             totalPagesFromMeta !== null ? totalPagesFromMeta : estimatedTotalPages
@@ -206,7 +237,11 @@ export function SensorReadingsTable({
       </CardContent>
 
       <CardFooter className="flex flex-col gap-3 border-t bg-muted/40 px-6 py-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 text-muted-foreground">
+        <div
+          className="flex items-center gap-2 text-muted-foreground"
+          aria-live="polite"
+          aria-atomic="true"
+        >
           <span
             className={cn("h-2.5 w-2.5 rounded-full", statusIndicatorClass)}
           />
@@ -216,8 +251,9 @@ export function SensorReadingsTable({
           <Button
             type="button"
             variant="outline"
+            size="sm"
             onClick={handlePrevious}
-            disabled={!canPreviousPage || isLoading}
+            disabled={!canPreviousPage || isLoading || isManualRefresh}
           >
             Previous
           </Button>
@@ -227,8 +263,9 @@ export function SensorReadingsTable({
           <Button
             type="button"
             variant="outline"
+            size="sm"
             onClick={handleNext}
-            disabled={!canNextPage || isLoading}
+            disabled={!canNextPage || isLoading || isManualRefresh}
           >
             Next
           </Button>
