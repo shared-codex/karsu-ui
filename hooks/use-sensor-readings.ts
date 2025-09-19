@@ -7,7 +7,7 @@ import {
   type SensorReadingsResponse,
 } from "@/lib/api/sensor-readings";
 
-const DEFAULT_POLL_INTERVAL_MS = 5000;
+export const DEFAULT_SENSOR_POLL_INTERVAL_MS = 5000;
 
 type FetchRequest = {
   page: number;
@@ -60,7 +60,7 @@ export interface UseSensorReadingsResult {
 export function useSensorReadings({
   initialPage = 1,
   initialLimit = 20,
-  pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
+  pollIntervalMs = DEFAULT_SENSOR_POLL_INTERVAL_MS,
   enabled = true,
 }: UseSensorReadingsOptions = {}): UseSensorReadingsResult {
   const [page, setPageState] = useState(() =>

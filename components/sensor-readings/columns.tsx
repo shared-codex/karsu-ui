@@ -14,7 +14,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
   hour12: false,
 });
 
-function formatTimestamp(value: string) {
+export function formatTimestamp(value: string) {
   const parsed = new Date(value);
 
   if (Number.isNaN(parsed.getTime())) {
